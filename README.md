@@ -16,6 +16,8 @@ A single-page app that calculates great-circle distances between airports and vi
 
 ## Usage
 Open `airport-distance-app.html` in any modern browser.
+You can also use the hosted version:
+`https://frankslin.github.io/airport-distance-map/airport-distance-app.html`
 
 ## Data Source
 Airport coordinates are derived from the OurAirports public dataset and filtered to `large_airport` and `medium_airport` entries with `scheduled_service=yes` and valid IATA codes.

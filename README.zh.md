@@ -16,6 +16,8 @@
 
 ## 使用方式
 用浏览器直接打开 `airport-distance-app.html`。
+也可以使用线上版本：
+`https://frankslin.github.io/airport-distance-map/airport-distance-app.html`
 
 ## 数据来源
 机场坐标来自 OurAirports 公共数据集，筛选条件为：`large_airport` 与 `medium_airport`、`scheduled_service=yes`、且有有效 IATA 代码。

@@ -228,6 +228,14 @@
             font-size: 12px;
             color: var(--muted);
         }
+        .footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
         @media (max-width: 960px) {
             .grid {
                 grid-template-columns: 1fr;
@@ -289,7 +297,8 @@
                 <div class="globe-label" id="globeLabel">拖动地球以旋转视角</div>
             </div>
             <div class="footer">
-                基于 Haversine 公式计算 · 坐标来源：OurAirports 公共数据集
+                基于 Haversine 公式计算 · 坐标来源：OurAirports 公共数据集 ·
+                <a href="https://github.com/frankslin/airport-distance-map" target="_blank" rel="noopener">GitHub</a>
             </div>
         </div>
     </div>
@@ -509,6 +518,13 @@
         };
 
         inputEl.addEventListener('input', handleInput);
+        inputEl.addEventListener('focus', () => {
+            inputEl.select();
+            handleInput();
+        });
+        inputEl.addEventListener('click', () => {
+            inputEl.select();
+        });
 
         inputEl.addEventListener('keydown', (event) => {
             if (!currentItems.length) return;
