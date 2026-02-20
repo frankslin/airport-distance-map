@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>世界主要机场大圆距离计算器</title>
+    <title>Flight Route Distance Calculator</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
@@ -30,10 +30,13 @@
             margin: 0 auto;
         }
         header {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
             margin-bottom: 20px;
+        }
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
         }
         h1 {
             font-family: "Space Grotesk", "Noto Sans SC", sans-serif;
@@ -45,6 +48,7 @@
         .subtitle {
             color: var(--muted);
             font-size: 14px;
+            margin-top: 8px;
         }
         .grid {
             display: grid;
@@ -153,6 +157,9 @@
             font-weight: 600;
             font-size: 13px;
         }
+        #langToggle {
+            min-width: 72px;
+        }
         .btn-accent {
             border-color: transparent;
             background: var(--primary-color);
@@ -249,30 +256,33 @@
 <body>
 <div class="app">
     <header>
-        <h1>✈️ 航线距离计算器</h1>
-        <div class="subtitle">输入机场或 IATA 代码，距离与地球视角会实时更新。</div>
+        <div class="header-top">
+            <h1 id="appTitle">✈️ Flight Route Distance Calculator</h1>
+            <button class="btn" id="langToggle" type="button">中文</button>
+        </div>
+        <div class="subtitle" id="subtitle">Enter an airport or IATA code, and the distance plus globe view update instantly.</div>
     </header>
 
     <div class="grid">
         <div class="panel">
             <div class="input-group">
-                <label for="originInput">起点机场</label>
+                <label for="originInput" id="originLabel">Origin Airport</label>
                 <div class="field">
-                    <input id="originInput" type="text" placeholder="例如：西雅图 (SEA)">
+                    <input id="originInput" type="text" placeholder="e.g. Seattle (SEA)">
                     <div class="autocomplete" id="originList"></div>
                 </div>
             </div>
             <div class="input-group">
-                <label for="destInput">终点机场</label>
+                <label for="destInput" id="destLabel">Destination Airport</label>
                 <div class="field">
-                    <input id="destInput" type="text" placeholder="例如：台北桃园 (TPE)">
+                    <input id="destInput" type="text" placeholder="e.g. Taipei Taoyuan (TPE)">
                     <div class="autocomplete" id="destList"></div>
                 </div>
             </div>
 
             <div class="controls">
-                <button class="btn" id="swapBtn">交换</button>
-                <button class="btn btn-accent" id="randomBtn">随机路线</button>
+                <button class="btn" id="swapBtn">Swap</button>
+                <button class="btn btn-accent" id="randomBtn">Random Route</button>
             </div>
 
             <div class="chips">
@@ -284,20 +294,20 @@
             </div>
 
             <div id="result" class="result-card">
-                <div class="route-name" id="routeName">请选择两个机场</div>
+                <div class="route-name" id="routeName">Select two airports</div>
                 <div id="km" class="distance-val">— km</div>
                 <div id="miles" class="unit">— miles</div>
             </div>
-            <div class="hint">支持输入 IATA 代码、城市名、中英文混输；上下方向键选择，回车确认。</div>
+            <div class="hint" id="hint">Supports IATA code, city name, and mixed-language input; use arrow keys to select and Enter to confirm.</div>
         </div>
 
         <div class="panel">
             <div id="globe-wrap">
                 <canvas id="globe"></canvas>
-                <div class="globe-label" id="globeLabel">拖动地球以旋转视角</div>
+                <div class="globe-label" id="globeLabel">Drag the globe to rotate the view</div>
             </div>
             <div class="footer">
-                基于 Haversine 公式计算 · 坐标来源：OurAirports 公共数据集 ·
+                <span id="footerPrefix">Distance by Haversine formula · Data source: OurAirports public dataset · </span>
                 <a href="https://github.com/frankslin/airport-distance-map" target="_blank" rel="noopener">GitHub</a>
             </div>
         </div>
@@ -313,6 +323,46 @@
         .map(([code, data]) => ({ code, ...data }))
         .sort((a, b) => a.name.localeCompare(b.name, "zh"));
 
+    const i18n = {
+        en: {
+            documentTitle: 'Flight Route Distance Calculator',
+            appTitle: '✈️ Flight Route Distance Calculator',
+            subtitle: 'Enter an airport or IATA code, and the distance plus globe view update instantly.',
+            originLabel: 'Origin Airport',
+            destLabel: 'Destination Airport',
+            originPlaceholder: 'e.g. Seattle (SEA)',
+            destPlaceholder: 'e.g. Taipei Taoyuan (TPE)',
+            swapBtn: 'Swap',
+            randomBtn: 'Random Route',
+            routePlaceholder: 'Select two airports',
+            kmUnit: 'km',
+            milesUnit: 'miles',
+            hint: 'Supports IATA code, city name, and mixed-language input; use arrow keys to select and Enter to confirm.',
+            globeLabel: 'Drag the globe to rotate the view',
+            footerPrefix: 'Distance by Haversine formula · Data source: OurAirports public dataset · ',
+            langToggle: '中文'
+        },
+        zh: {
+            documentTitle: '航线距离计算器',
+            appTitle: '✈️ 航线距离计算器',
+            subtitle: '输入机场或 IATA 代码，距离与地球视角会实时更新。',
+            originLabel: '起点机场',
+            destLabel: '终点机场',
+            originPlaceholder: '例如：西雅图 (SEA)',
+            destPlaceholder: '例如：台北桃园 (TPE)',
+            swapBtn: '交换',
+            randomBtn: '随机路线',
+            routePlaceholder: '请选择两个机场',
+            kmUnit: '公里',
+            milesUnit: '英里',
+            hint: '支持输入 IATA 代码、城市名、中英文混输；上下方向键选择，回车确认。',
+            globeLabel: '拖动地球以旋转视角',
+            footerPrefix: '基于 Haversine 公式计算 · 坐标来源：OurAirports 公共数据集 · ',
+            langToggle: 'EN'
+        }
+    };
+    let currentLanguage = 'en';
+
     const originInput = document.getElementById('originInput');
     const destInput = document.getElementById('destInput');
     const originList = document.getElementById('originList');
@@ -320,6 +370,34 @@
     const routeName = document.getElementById('routeName');
     const kmEl = document.getElementById('km');
     const milesEl = document.getElementById('miles');
+    const langToggle = document.getElementById('langToggle');
+
+    function t(key) {
+        return i18n[currentLanguage][key];
+    }
+
+    function applyStaticTexts() {
+        document.title = t('documentTitle');
+        document.documentElement.lang = currentLanguage === 'zh' ? 'zh-CN' : 'en';
+        document.getElementById('appTitle').textContent = t('appTitle');
+        document.getElementById('subtitle').textContent = t('subtitle');
+        document.getElementById('originLabel').textContent = t('originLabel');
+        document.getElementById('destLabel').textContent = t('destLabel');
+        originInput.placeholder = t('originPlaceholder');
+        destInput.placeholder = t('destPlaceholder');
+        document.getElementById('swapBtn').textContent = t('swapBtn');
+        document.getElementById('randomBtn').textContent = t('randomBtn');
+        document.getElementById('hint').textContent = t('hint');
+        document.getElementById('globeLabel').textContent = t('globeLabel');
+        document.getElementById('footerPrefix').textContent = t('footerPrefix');
+        langToggle.textContent = t('langToggle');
+    }
+
+    function setLanguage(lang) {
+        currentLanguage = lang === 'zh' ? 'zh' : 'en';
+        applyStaticTexts();
+        updateUI();
+    }
 
     function normalize(text) {
         return text
@@ -367,9 +445,9 @@
         const destCode = getCodeFromInput(destInput.value);
 
         if (!originCode || !destCode) {
-            routeName.textContent = "请选择两个机场";
-            kmEl.textContent = "— km";
-            milesEl.textContent = "— miles";
+            routeName.textContent = t('routePlaceholder');
+            kmEl.textContent = `— ${t('kmUnit')}`;
+            milesEl.textContent = `— ${t('milesUnit')}`;
             updateGlobe(null, null);
             return;
         }
@@ -381,8 +459,8 @@
         const originLabel = origin.city || origin.name;
         const destLabel = dest.city || dest.name;
         routeName.textContent = `${originLabel} (${originCode}) → ${destLabel} (${destCode})`;
-        kmEl.textContent = `${Math.round(distance).toLocaleString()} km`;
-        milesEl.textContent = `${Math.round(distance * 0.621371).toLocaleString()} miles`;
+        kmEl.textContent = `${Math.round(distance).toLocaleString()} ${t('kmUnit')}`;
+        milesEl.textContent = `${Math.round(distance * 0.621371).toLocaleString()} ${t('milesUnit')}`;
 
         updateGlobe({ code: originCode, ...origin }, { code: destCode, ...dest });
     }
@@ -580,6 +658,9 @@
             setRoute(a, b);
         });
     });
+    langToggle.addEventListener('click', () => {
+        setLanguage(currentLanguage === 'en' ? 'zh' : 'en');
+    });
 
     setupAutocomplete(originInput, originList);
     setupAutocomplete(destInput, destList);
@@ -729,7 +810,7 @@
 
     window.addEventListener('resize', resizeGlobe);
 
-    // 默认线路
+    setLanguage('en');
     setRoute('SEA', 'TPE');
 </script>
 </body>
