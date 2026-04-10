@@ -221,14 +221,46 @@
         }
         .globe-label {
             position: absolute;
-            top: 14px;
-            left: 14px;
+            right: 14px;
+            bottom: 14px;
             color: #e2e8f0;
             font-size: 12px;
             background: rgba(15, 23, 42, 0.6);
             padding: 6px 10px;
             border-radius: 999px;
             border: 1px solid rgba(148, 163, 184, 0.4);
+        }
+        .globe-toolbar {
+            position: absolute;
+            left: 14px;
+            bottom: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .zoom-btn {
+            width: 34px;
+            height: 34px;
+            border: 1px solid rgba(148, 163, 184, 0.45);
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.7);
+            color: #e2e8f0;
+            font-size: 20px;
+            line-height: 1;
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            backdrop-filter: blur(8px);
+        }
+        .zoom-btn.reset-btn {
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .zoom-btn.is-hidden {
+            display: none;
+        }
+        .zoom-btn:hover {
+            background: rgba(15, 23, 42, 0.88);
         }
         .footer {
             margin-top: 18px;
@@ -304,6 +336,11 @@
         <div class="panel">
             <div id="globe-wrap">
                 <canvas id="globe"></canvas>
+                <div class="globe-toolbar">
+                    <button class="zoom-btn reset-btn" id="resetZoomBtn" type="button" aria-label="Reset zoom" title="Reset zoom">⟳</button>
+                    <button class="zoom-btn" id="zoomInBtn" type="button" aria-label="Zoom in" title="Zoom in">+</button>
+                    <button class="zoom-btn" id="zoomOutBtn" type="button" aria-label="Zoom out" title="Zoom out">−</button>
+                </div>
                 <div class="globe-label" id="globeLabel">Drag the globe to rotate the view</div>
             </div>
             <div class="footer">
@@ -338,9 +375,12 @@
             kmUnit: 'km',
             milesUnit: 'miles',
             hint: 'Supports IATA code, city name, and mixed-language input; use arrow keys to select and Enter to confirm.',
-            globeLabel: 'Drag the globe to rotate the view',
+            globeLabel: 'Drag to rotate, scroll or use +/- to zoom',
             footerPrefix: 'Distance by Haversine formula · Data source: OurAirports public dataset · ',
-            langToggle: '中文'
+            langToggle: '中文',
+            resetZoom: 'Reset zoom',
+            zoomIn: 'Zoom in',
+            zoomOut: 'Zoom out'
         },
         zh: {
             documentTitle: '航线距离计算器',
@@ -356,9 +396,12 @@
             kmUnit: '公里',
             milesUnit: '英里',
             hint: '支持输入 IATA 代码、城市名、中英文混输；上下方向键选择，回车确认。',
-            globeLabel: '拖动地球以旋转视角',
+            globeLabel: '拖动可旋转，滚轮或 +/- 可缩放',
             footerPrefix: '基于 Haversine 公式计算 · 坐标来源：OurAirports 公共数据集 · ',
-            langToggle: 'EN'
+            langToggle: 'EN',
+            resetZoom: '重置缩放',
+            zoomIn: '放大',
+            zoomOut: '缩小'
         }
     };
     let currentLanguage = 'en';
@@ -371,6 +414,9 @@
     const kmEl = document.getElementById('km');
     const milesEl = document.getElementById('miles');
     const langToggle = document.getElementById('langToggle');
+    const resetZoomBtn = document.getElementById('resetZoomBtn');
+    const zoomInBtn = document.getElementById('zoomInBtn');
+    const zoomOutBtn = document.getElementById('zoomOutBtn');
 
     function t(key) {
         return i18n[currentLanguage][key];
@@ -391,6 +437,12 @@
         document.getElementById('globeLabel').textContent = t('globeLabel');
         document.getElementById('footerPrefix').textContent = t('footerPrefix');
         langToggle.textContent = t('langToggle');
+        resetZoomBtn.title = t('resetZoom');
+        resetZoomBtn.setAttribute('aria-label', t('resetZoom'));
+        zoomInBtn.title = t('zoomIn');
+        zoomInBtn.setAttribute('aria-label', t('zoomIn'));
+        zoomOutBtn.title = t('zoomOut');
+        zoomOutBtn.setAttribute('aria-label', t('zoomOut'));
     }
 
     function setLanguage(lang) {
@@ -674,6 +726,21 @@
     let currentRoute = null;
     let width = 0;
     let height = 0;
+    let baseProjectionScale = 0;
+    let globeZoom = 1;
+    const minGlobeZoom = 0.7;
+    const maxGlobeZoom = 2.3;
+
+    function syncResetZoomButton() {
+        resetZoomBtn.classList.toggle('is-hidden', Math.abs(globeZoom - 1) < 0.001);
+    }
+
+    function setGlobeZoom(nextZoom) {
+        globeZoom = Math.max(minGlobeZoom, Math.min(maxGlobeZoom, nextZoom));
+        projection.scale(baseProjectionScale * globeZoom);
+        syncResetZoomButton();
+        renderGlobe();
+    }
 
     function resizeGlobe() {
         const wrap = document.getElementById('globe-wrap');
@@ -685,11 +752,53 @@
         canvas.style.width = `${width}px`;
         canvas.style.height = `${height}px`;
         context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        baseProjectionScale = Math.min(width, height) * 0.44;
         projection
             .translate([width / 2, height / 2])
-            .scale(Math.min(width, height) * 0.44)
+            .scale(baseProjectionScale * globeZoom)
             .clipAngle(90);
         renderGlobe();
+    }
+
+    function getRouteSegments(origin, dest, samples = 160) {
+        const interpolate = d3.geoInterpolate([origin.lon, origin.lat], [dest.lon, dest.lat]);
+        const center = projection.invert([width / 2, height / 2]);
+        const segments = [];
+        let currentSegment = null;
+
+        for (let i = 0; i <= samples; i += 1) {
+            const point = interpolate(i / samples);
+            const isFront = d3.geoDistance(point, center) <= (Math.PI / 2);
+            const projected = projection(point);
+
+            if (!currentSegment || currentSegment.front !== isFront) {
+                currentSegment = { front: isFront, points: [] };
+                segments.push(currentSegment);
+            }
+
+            if (projected) {
+                currentSegment.points.push(projected);
+            }
+        }
+
+        return segments.filter(segment => segment.points.length > 1);
+    }
+
+    function strokeRouteSegment(points, color, lineWidth, dash = []) {
+        if (points.length < 2) return;
+        context.save();
+        context.strokeStyle = color;
+        context.lineWidth = lineWidth;
+        context.setLineDash(dash);
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+        context.beginPath();
+        context.moveTo(points[0][0], points[0][1]);
+        for (let i = 1; i < points.length; i += 1) {
+            context.lineTo(points[i][0], points[i][1]);
+        }
+        context.stroke();
+        context.restore();
     }
 
     function renderGlobe() {
@@ -717,17 +826,13 @@
 
         if (currentRoute) {
             const { origin, dest } = currentRoute;
-            context.strokeStyle = '#f97316';
-            context.lineWidth = 2.2;
-            context.beginPath();
-            d3.geoPath(projection, context)({
-                type: 'LineString',
-                coordinates: [
-                    [origin.lon, origin.lat],
-                    [dest.lon, dest.lat]
-                ]
-            });
-            context.stroke();
+            const routeSegments = getRouteSegments(origin, dest);
+            routeSegments
+                .filter(segment => !segment.front)
+                .forEach(segment => strokeRouteSegment(segment.points, 'rgba(251, 146, 60, 0.45)', 1.8, [7, 6]));
+            routeSegments
+                .filter(segment => segment.front)
+                .forEach(segment => strokeRouteSegment(segment.points, '#f97316', 2.4));
 
             const drawPoint = (point, color) => {
                 const coords = projection([point.lon, point.lat]);
@@ -797,7 +902,25 @@
                     last = null;
                 })
             );
+
+        canvas.addEventListener('wheel', (event) => {
+            event.preventDefault();
+            const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+            setGlobeZoom(globeZoom * factor);
+        }, { passive: false });
     }
+
+    zoomInBtn.addEventListener('click', () => {
+        setGlobeZoom(globeZoom * 1.15);
+    });
+
+    zoomOutBtn.addEventListener('click', () => {
+        setGlobeZoom(globeZoom / 1.15);
+    });
+
+    resetZoomBtn.addEventListener('click', () => {
+        setGlobeZoom(1);
+    });
 
     fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json')
         .then(res => res.json())
@@ -811,6 +934,7 @@
     window.addEventListener('resize', resizeGlobe);
 
     setLanguage('en');
+    syncResetZoomButton();
     setRoute('SEA', 'TPE');
 </script>
 </body>
